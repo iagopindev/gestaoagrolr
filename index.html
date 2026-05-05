@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Labor Rural Agri | Gestão Inteligente</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Auth Screen -->
+        <section id="auth-screen" class="view active">
+            <div class="auth-container">
+                <div class="brand">
+                    <img src="logo.png" alt="Labor Rural" class="brand-logo">
+                    <h1>Labor Rural</h1>
+                    <p>Agro Gestão Inteligente</p>
+                </div>
+                
+                <div class="auth-card">
+                    <div class="tabs">
+                        <button id="tab-login" class="tab-btn active" onclick="switchAuthTab('login')">Entrar</button>
+                        <button id="tab-register" class="tab-btn" onclick="switchAuthTab('register')">Cadastrar</button>
+                    </div>
+                    
+                    <form id="login-form" class="auth-form active">
+                        <div class="input-group">
+                            <label><i data-lucide="mail"></i> E-mail</label>
+                            <input type="email" id="login-email" placeholder="seu@email.com" required>
+                        </div>
+                        <div class="input-group">
+                            <label><i data-lucide="lock"></i> Senha</label>
+                            <input type="password" id="login-password" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Entrar</button>
+                        <div class="auth-extras">
+                            <a href="#" onclick="showForgotPassword()">Esqueci minha senha</a>
+                        </div>
+                        <p class="auth-footer">Não tem uma conta? <a href="#" onclick="switchAuthTab('register')">Cadastre-se</a></p>
+                    </form>
+
+                    <form id="forgot-password-form" class="auth-form">
+                        <div class="input-group">
+                            <label><i data-lucide="mail"></i> E-mail</label>
+                            <input type="email" id="forgot-email" placeholder="seu@email.com" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Enviar link de recuperação</button>
+                        <p class="auth-footer"><a href="#" onclick="switchAuthTab('login')">Voltar para o Login</a></p>
+                    </form>
+                    
+                    <form id="reset-password-form" class="auth-form">
+                        <div class="input-group">
+                            <label><i data-lucide="lock"></i> Nova Senha</label>
+                            <input type="password" id="new-password" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Atualizar Senha</button>
+                    </form>
+                    
+                    <form id="register-form" class="auth-form">
+                        <div class="input-group">
+                            <label><i data-lucide="user"></i> Nome Completo</label>
+                            <input type="text" id="register-name" placeholder="Nome Completo" required>
+                        </div>
+                        <div class="input-group">
+                            <label><i data-lucide="mail"></i> E-mail</label>
+                            <input type="email" id="register-email" placeholder="seu@email.com" required>
+                        </div>
+                        <div class="input-group">
+                            <label><i data-lucide="lock"></i> Senha</label>
+                            <input type="password" id="register-password" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Criar Conta</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Approval Pending -->
+        <section id="pending-screen" class="view">
+            <div class="status-container">
+                <div class="status-icon pending"><i data-lucide="clock"></i></div>
+                <h2>Aguardando Aprovação</h2>
+                <p>O administrador revisará seu acesso.</p>
+                <button onclick="checkApprovalStatus()" class="btn-secondary">Atualizar Status</button>
+                <button onclick="signOut()" class="btn-ghost">Sair</button>
+            </div>
+        </section>
+
+        <!-- Main App Layout -->
+        <main id="main-app" class="view">
+            <header class="main-header">
+                <div class="header-left">
+                    <button id="back-btn" class="btn-ghost hidden" onclick="switchView('dashboard')">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <div class="header-brand">
+                        <img src="logo.png" alt="LR" class="header-logo">
+                        <div class="user-info">
+                            <span id="user-greeting">Olá</span>
+                            <h2 id="view-title">Dashboard</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="admin-btn" class="admin-only hidden" onclick="switchView('admin')">
+                        <i data-lucide="shield-check"></i>
+                    </button>
+                    <button onclick="signOut()" class="logout-btn"><i data-lucide="log-out"></i></button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Dashboard -->
+                <div id="dashboard-view" class="sub-view active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span>Custos Totais</span>
+                            <h3 id="stat-total-costs">R$ 0,00</h3>
+                        </div>
+                        <div class="stat-card">
+                            <span>Fazendas</span>
+                            <h3 id="stat-farms">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="form-container chart-container" style="margin-bottom: 25px;">
+                        <h4>Distribuição de Custos por Atividade</h4>
+                        <canvas id="costsChart"></canvas>
+                    </div>
+                    
+                    <div class="card-grid">
+                        <div class="action-card" onclick="switchView('atividades')">
+                            <i data-lucide="plus-square"></i>
+                            <span>Lançar Atividade</span>
+                        </div>
+
+                        <div class="action-card" onclick="switchView('insumos')">
+                            <i data-lucide="shopping-cart"></i>
+                            <span>Comprar Insumos</span>
+                        </div>
+                        <div class="action-card" onclick="switchView('estoque')">
+                            <i data-lucide="box"></i>
+                            <span>Estoque Atual</span>
+                        </div>
+                        <div class="action-card" onclick="switchView('receitas')">
+                            <i data-lucide="dollar-sign" style="color: var(--success);"></i>
+                            <span>Receitas</span>
+                        </div>
+                        <div class="action-card" onclick="switchView('setup')">
+                            <i data-lucide="map-pin"></i>
+                            <span>Cadastros</span>
+                        </div>
+                        <div class="action-card" onclick="switchView('export')">
+                            <i data-lucide="download"></i>
+                            <span>Exportar Dados</span>
+                        </div>
+                        <div id="admin-card" class="action-card admin-only hidden" onclick="switchView('admin')">
+                            <i data-lucide="shield-alert"></i>
+                            <span>Aprovações</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Setup View -->
+                <div id="setup-view" class="sub-view">
+                    <div class="section-header"><h3>Configurações</h3></div>
+                    <div class="form-container">
+                        <h4>Fazendas</h4>
+                        <form id="farm-form">
+                            <input type="hidden" id="farm-id">
+                            <div class="input-group">
+                                <input type="text" id="farm-name" placeholder="Nome da Fazenda" required>
+                                <button type="submit" id="farm-submit-btn" class="btn-primary">Adicionar</button>
+                            </div>
+                        </form>
+                        <div id="farms-list" class="item-list" style="margin-top: 20px;"></div>
+                    </div>
+                    <div class="form-container" style="margin-top: 20px;">
+                        <h4>Talhões</h4>
+                        <form id="plot-form">
+                            <input type="hidden" id="plot-id">
+                            <div class="input-group">
+                                <select id="plot-farm-id" required></select>
+                            </div>
+                            <div class="grid-2">
+                                <input type="text" id="plot-name" placeholder="Nome" required>
+                                <input type="number" step="0.01" id="plot-area" placeholder="Hectares" required>
+                            </div>
+                            <button type="submit" id="plot-submit-btn" class="btn-primary" style="margin-top: 10px;">Adicionar Talhão</button>
+                        </form>
+                        <div id="plots-list" class="item-list" style="margin-top: 20px;"></div>
+                    </div>
+                </div>
+
+                <!-- Insumos View -->
+                <div id="insumos-view" class="sub-view">
+                    <div class="section-header"><h3>Compra de Insumos</h3></div>
+                    <div class="form-container">
+                        <form id="purchase-form">
+                            <input type="hidden" id="purchase-id">
+                            <div class="input-group">
+                                <label>Insumo / Produto</label>
+                                <input list="input-categories" id="purchase-name" placeholder="Digite ou selecione..." required>
+                                <datalist id="input-categories">
+                                    <!-- Dinamicamente preenchido -->
+                                </datalist>
+                            </div>
+                            <div class="grid-2">
+                                <div class="input-group">
+                                    <label>Unidade</label>
+                                    <select id="purchase-unit" required>
+                                        <option value="Saca">Saca</option>
+                                        <option value="Kg">Kg</option>
+                                        <option value="L">Litro</option>
+                                        <option value="Arroba">Arroba</option>
+                                        <option value="H">Hora</option>
+                                        <option value="Dia">Dia</option>
+                                        <option value="Un">Unidade</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Quantidade</label>
+                                    <input type="number" step="0.01" id="purchase-qty" required>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>Valor Total (R$)</label>
+                                <input type="number" step="0.01" id="purchase-total" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Registrar Compra</button>
+                        </form>
+                    </div>
+
+                    <div class="form-container" style="margin-top: 20px;">
+                        <h4>Histórico de Compras</h4>
+                        <select id="purchase-history-filter" onchange="loadPurchaseHistory()" style="margin-bottom: 10px; width: 100%;">
+                            <option value="">Filtrar por Insumo...</option>
+                        </select>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead><tr><th>Data</th><th>Item</th><th>Qtd</th><th>Total</th><th>Ações</th></tr></thead>
+                                <tbody id="purchase-history-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estoque View -->
+                <div id="estoque-view" class="sub-view">
+                    <div class="section-header"><h3>Estoque Atual</h3></div>
+                    <div id="inventory-list" class="item-list"></div>
+                </div>
+
+                <!-- Atividades View -->
+                <div id="atividades-view" class="sub-view">
+                    <div class="section-header"><h3>Lançamento de Atividade</h3></div>
+                    <div class="form-container">
+                        <form id="activity-form">
+                            <input type="hidden" id="activity-id">
+                            <div class="input-group">
+                                <label>Atividade</label>
+                                <select id="activity-type" required>
+                                    <option value="Administração">Administração</option>
+                                    <option value="Adubação via Solo/Folha">Adubação via Solo/Folha</option>
+                                    <option value="Condução de lavoura">Condução de lavoura</option>
+                                    <option value="Controle de pragas e doenças">Controle de pragas e doenças</option>
+                                    <option value="Controle de plantas daninhas">Controle de plantas daninhas</option>
+                                    <option value="Irrigação">Irrigação</option>
+                                    <option value="Colheita">Colheita</option>
+                                    <option value="Pós Colheita e Comercialização">Pós Colheita e Comercialização</option>
+                                    <option value="Arrendamento">Arrendamento</option>
+                                </select>
+                            </div>
+
+                            <div class="input-group">
+                                <label>Insumo / Recurso</label>
+                                <select id="activity-input-id" required></select>
+                            </div>
+
+                            <div id="new-item-fields" class="hidden">
+                                <div class="grid-2">
+                                    <div class="input-group">
+                                        <label>Unidade</label>
+                                        <select id="activity-new-unit">
+                                            <option value="Saca">Saca</option>
+                                            <option value="Kg">Kg</option>
+                                            <option value="L">L</option>
+                                            <option value="Arroba">Arroba</option>
+                                            <option value="H">H</option>
+                                            <option value="Un">Unidade</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Vlr Unitário (Auto)</label>
+                                        <input type="number" id="activity-calc-unit-price" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid-2">
+                                <div class="input-group">
+                                    <label>Quantidade</label>
+                                    <input type="number" step="0.01" id="activity-qty" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>Valor Total (R$)</label>
+                                    <input type="number" step="0.01" id="activity-total-cost" required>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label>Observações</label>
+                                <textarea id="activity-obs" rows="2" placeholder="Notas..."></textarea>
+                            </div>
+
+                            <div class="input-group">
+                                <label>Talhões (Rateio)</label>
+                                <div id="plots-selector" class="checkbox-group"></div>
+                            </div>
+
+                            <div id="rateio-preview" class="rateio-preview hidden">
+                                <h5>Prévia:</h5>
+                                <div id="rateio-list"></div>
+                            </div>
+
+                            <button type="submit" class="btn-primary" style="margin-top: 15px;">Salvar Lançamento</button>
+                        </form>
+                    </div>
+
+                    <div class="form-container" style="margin-top: 20px;">
+                        <h4>Histórico de Lançamentos</h4>
+                        <select id="activity-history-filter" onchange="loadActivityHistory()" style="margin-bottom: 10px; width: 100%;">
+                            <option value="">Filtrar por Atividade...</option>
+                        </select>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead><tr><th>Data</th><th>Tipo</th><th>Custo</th><th>Obs</th><th>Ações</th></tr></thead>
+                                <tbody id="activity-history-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Export View -->
+                <div id="export-view" class="sub-view">
+                    <div class="section-header"><h3>Exportar Relatórios</h3></div>
+                    <div class="form-container">
+                        <label>Filtrar por Talhão</label>
+                        <select id="export-filter-plot" style="margin-bottom: 20px;"></select>
+                        <div class="grid-2">
+                            <button class="btn-primary" onclick="exportData('pdf')">PDF</button>
+                            <button class="btn-primary" onclick="exportData('excel')">Excel</button>
+                        </div>
+                    </div>
+                    <div id="export-preview" class="table-responsive" style="margin-top: 20px;">
+                        <table class="data-table">
+                            <thead><tr><th>Data</th><th>Atividade</th><th>Custo</th><th>Obs</th></tr></thead>
+                            <tbody id="export-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Admin View -->
+                <div id="admin-view" class="sub-view">
+                    <div class="section-header"><h3>Aprovações</h3></div>
+                    <div id="pending-users-list" class="item-list"></div>
+                </div>
+
+                <!-- Receitas View -->
+                <div id="receitas-view" class="sub-view">
+                    <div class="section-header"><h3>Receitas</h3></div>
+                    <div class="form-container">
+                        <h4>Lançar Produção</h4>
+                        <form id="production-form">
+                            <div class="grid-2">
+                                <div class="input-group">
+                                    <label>Mês/Ano</label>
+                                    <input type="month" id="prod-month" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>Qtd Total (Kg)</label>
+                                    <input type="number" step="0.01" id="prod-qty" required>
+                                </div>
+                            </div>
+                            <div class="input-group" style="margin-top: 10px;">
+                                <label>Talhões Participantes</label>
+                                <div id="prod-plots-selector" class="checkbox-group"></div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top: 15px;">Salvar Produção</button>
+                        </form>
+                    </div>
+
+                    <div class="form-container" style="margin-top: 20px;">
+                        <h4>Registrar Venda</h4>
+                        <form id="sales-form">
+                            <div class="grid-2">
+                                <div class="input-group">
+                                    <label>Quantidade (Kg)</label>
+                                    <input type="number" step="0.01" id="sale-qty" required>
+                                </div>
+                                <div class="input-group">
+                                    <label>Preço por Kg (R$)</label>
+                                    <input type="number" step="0.01" id="sale-price" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top: 15px;">Registrar Venda</button>
+                        </form>
+                    </div>
+
+                    <div id="revenue-stats" class="stats-grid" style="margin-top: 25px;">
+                        <div class="stat-card"><span>Renda Bruta</span><h3 id="rev-gross">R$ 0,00</h3></div>
+                        <div class="stat-card"><span>Renda p/ Ha</span><h3 id="rev-per-ha">R$ 0,00</h3></div>
+                        <div class="stat-card"><span>Preço Médio</span><h3 id="rev-avg-price">R$ 0,00</h3></div>
+                    </div>
+                    
+                    <div class="form-container" style="margin-top: 20px;">
+                        <h4>Histórico de Produção</h4>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead><tr><th>Mês/Ano</th><th>Talhões</th><th>Qtd</th><th>Produtiv.</th><th>Ações</th></tr></thead>
+                                <tbody id="production-history-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="form-container" style="margin-top: 20px;">
+                        <h4>Histórico de Vendas</h4>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead><tr><th>Data</th><th>Qtd</th><th>Preço</th><th>Total</th><th>Ações</th></tr></thead>
+                                <tbody id="sales-history-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Nav -->
+            <nav class="bottom-nav mobile-only">
+                <button id="nav-dashboard" class="nav-item active" onclick="switchView('dashboard')"><i data-lucide="home"></i></button>
+                <button id="nav-receitas" class="nav-item" onclick="switchView('receitas')"><i data-lucide="dollar-sign"></i></button>
+                <button id="nav-insumos" class="nav-item" onclick="switchView('insumos')"><i data-lucide="shopping-bag"></i></button>
+                <button id="nav-atividades" class="nav-item" onclick="switchView('atividades')"><i data-lucide="plus-circle"></i></button>
+                <button id="nav-setup" class="nav-item" onclick="switchView('setup')"><i data-lucide="settings"></i></button>
+            </nav>
+        </main>
+        <div id="toast" class="toast"></div>
+    </div>
+</body>
+</html>
