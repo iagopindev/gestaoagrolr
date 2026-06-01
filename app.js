@@ -102,7 +102,7 @@ function showForgotPassword() {
 
 async function handleUserAuthenticated(user) {
     currentUser = user;
-    isAdmin = user.email === 'admin@laborrural.com';
+    isAdmin = user.email === 'iagoppin.dev@gmail.com';
     
     let { data: profile, error: fetchError } = await sb.from('bd_gest_agr_profiles').select('*').eq('id', user.id).maybeSingle();
     
